@@ -9,11 +9,29 @@ export default function QuickForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [timer, setTimer] = useState('0:00')
+  const [statusMsg, setStatusMsg] = useState('')
+
+  function getAccessToken(raw: string): string | null {
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed.accessToken || parsed.access_token || null
+    } catch {
+      if (raw.startsWith('eyJ')) return raw
+      return null
+    }
+  }
 
   async function handleActivate() {
     setError('')
     setSuccess('')
+    const token = getAccessToken(sessionData)
+    if (!token) {
+      setError('Session data phải chứa accessToken')
+      return
+    }
+
     setLoading(true)
+    setStatusMsg('Đang gửi...')
 
     let seconds = 0
     const timerInterval = setInterval(() => {
@@ -24,48 +42,43 @@ export default function QuickForm() {
     }, 1000)
 
     try {
-      const res = await fetch('/api/submit', {
+      const res = await fetch('/api/redeem', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ uniqueCode: cdkCode, sessionData }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cdk: cdkCode, access_token: token }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message || data.error || 'Lỗi')
+      if (!res.ok) throw new Error(data.error || 'Lỗi')
 
-      // Poll status
-      let attempt = 0
+      const jobId = data.job_id
+      setStatusMsg('Đang kích hoạt...')
+
       const poll = async () => {
-        attempt++
-        const checkRes = await fetch('/api/check', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ uniqueCode: cdkCode }),
-        })
-        const checkData = await checkRes.json()
+        const pollRes = await fetch(`/api/job/${jobId}?wait=30`)
+        const pollData = await pollRes.json()
 
-        if (checkData.status === 'completed') {
+        if (pollData.status === 'done') {
           clearInterval(timerInterval)
-          setSuccess(`🎉 Kích hoạt thành công! ${checkData.email ? `Email: ${checkData.email}` : ''}`)
+          setSuccess(`🎉 Kích hoạt thành công! Gói: ${pollData.workflow?.toUpperCase() || 'PLUS'}`)
           setCdkCode('')
           setSessionData('')
           setLoading(false)
+          setStatusMsg('')
           return
         }
-        if (checkData.status === 'failed') {
+        if (pollData.status === 'failed') {
           clearInterval(timerInterval)
-          throw new Error(checkData.message || 'Kích hoạt thất bại')
+          throw new Error('Kích hoạt thất bại. CDK đã được khôi phục.')
         }
-        if (attempt >= 120) {
-          clearInterval(timerInterval)
-          throw new Error('Hết thời gian chờ')
-        }
-        setTimeout(poll, 5000)
+        setStatusMsg(`Đang ${pollData.status}...`)
+        setTimeout(poll, 2000)
       }
-      setTimeout(poll, 3000)
+      setTimeout(poll, 2000)
     } catch (e: any) {
       clearInterval(timerInterval)
       setError(e.message)
       setLoading(false)
+      setStatusMsg('')
     }
   }
 
@@ -78,37 +91,27 @@ export default function QuickForm() {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           CDK Code <span className="text-red-500">*</span>
         </label>
-        <input
-          value={cdkCode}
-          onChange={(e) => setCdkCode(e.target.value)}
+        <input value={cdkCode} onChange={(e) => setCdkCode(e.target.value)}
           placeholder="TM-PLUS-XXXXXXXXXXXXXXXX"
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Session Data <span className="text-red-500">*</span>
           <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noopener noreferrer"
-            className="ml-2 text-blue-600 hover:underline font-normal">
-            Lấy Session
-          </a>
+            className="ml-2 text-blue-600 hover:underline font-normal">Lấy Session</a>
         </label>
-        <textarea
-          value={sessionData}
-          onChange={(e) => setSessionData(e.target.value)}
+        <textarea value={sessionData} onChange={(e) => setSessionData(e.target.value)}
           placeholder="Dán nội dung JSON session vào đây..."
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-        />
+          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
       </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       {success && <p className="text-green-600 text-sm font-medium">{success}</p>}
-      {loading && <p className="text-blue-600 text-sm">⏳ Đang xử lý... {timer}</p>}
-      <button
-        onClick={handleActivate}
+      {loading && <p className="text-blue-600 text-sm">⏳ {statusMsg} {timer}</p>}
+      <button onClick={handleActivate}
         disabled={!cdkCode.trim() || !sessionData.trim() || loading}
-        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium"
-      >
+        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">
         {loading ? 'Đang kích hoạt...' : 'Kích hoạt ngay'}
       </button>
     </div>

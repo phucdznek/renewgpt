@@ -1,16 +1,20 @@
 {
   "rewrites": [
     {
-      "source": "/api/submit",
-      "destination": "https://autosubai.com/submit"
+      "source": "/api/redeem",
+      "destination": "https://toolsmarket.online/redeem"
     },
     {
-      "source": "/api/check",
-      "destination": "https://autosubai.com/check"
+      "source": "/api/job/:path*",
+      "destination": "https://toolsmarket.online/job/:path*"
     },
     {
-      "source": "/api/status/:path*",
-      "destination": "https://autosubai.com/status/:path*"
+      "source": "/api/check/:path*",
+      "destination": "https://toolsmarket.online/check/:path*"
+    },
+    {
+      "source": "/api/check-bulk",
+      "destination": "https://toolsmarket.online/check-bulk"
     }
   ],
   "headers": [
