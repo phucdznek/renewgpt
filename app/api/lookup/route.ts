@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+interface CdkRecord {
+  code: string
+  type: string
+  status: string
+  used_at: string | null
+}
+
 export async function POST(req: NextRequest) {
   const { codes } = await req.json()
 
@@ -24,8 +31,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Map kết quả, những code không tìm thấy trả về not_found
-  const results = cleanCodes.map((code) => {
-    const found = cdks?.find((c) => c.code === code)
+  const results = cleanCodes.map((code: string) => {
+    const found = (cdks as CdkRecord[] | null)?.find((c: CdkRecord) => c.code === code)
     return found
       ? { code, type: found.type, status: found.status, used_at: found.used_at }
       : { code, status: 'not_found' }

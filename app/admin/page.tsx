@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 type Tab = 'orders' | 'cdks'
 
@@ -23,12 +23,14 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('orders')
 
   // Orders state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([])
   const [ordersTotal, setOrdersTotal] = useState(0)
   const [orderFilter, setOrderFilter] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   // CDKs state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [cdks, setCdks] = useState<any[]>([])
   const [cdksTotal, setCdksTotal] = useState(0)
   const [cdkFilter, setCdkFilter] = useState('')
@@ -36,7 +38,10 @@ export default function AdminPage() {
   const [addingCdks, setAddingCdks] = useState(false)
   const [addMsg, setAddMsg] = useState('')
 
-  const headers = { 'x-admin-token': token, 'Content-Type': 'application/json' }
+  const headers = useMemo(() => ({
+    'x-admin-token': token,
+    'Content-Type': 'application/json',
+  }), [token])
 
   const fetchOrders = useCallback(async () => {
     const params = orderFilter ? `?status=${orderFilter}` : ''
@@ -46,7 +51,7 @@ export default function AdminPage() {
       setOrders(d.data)
       setOrdersTotal(d.total)
     }
-  }, [token, orderFilter])
+  }, [headers, orderFilter])
 
   const fetchCdks = useCallback(async () => {
     const params = cdkFilter ? `?status=${cdkFilter}` : ''
@@ -56,13 +61,13 @@ export default function AdminPage() {
       setCdks(d.data)
       setCdksTotal(d.total)
     }
-  }, [token, cdkFilter])
+  }, [headers, cdkFilter])
 
   useEffect(() => {
     if (!authed) return
     if (tab === 'orders') fetchOrders()
     if (tab === 'cdks') fetchCdks()
-  }, [authed, tab, orderFilter, cdkFilter])
+  }, [authed, tab, fetchOrders, fetchCdks])
 
   async function login() {
     const res = await fetch('/api/admin/orders', { headers: { 'x-admin-token': token } })

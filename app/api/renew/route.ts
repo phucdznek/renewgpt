@@ -21,9 +21,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'CDK không tồn tại' }, { status: 404 })
   }
 
-  if (cdk.status !== 'available') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cdkRecord = cdk as any
+
+  if (cdkRecord.status !== 'available') {
     return NextResponse.json(
-      { error: cdk.status === 'used' ? 'CDK đã được sử dụng' : 'CDK đã hết hạn' },
+      { error: cdkRecord.status === 'used' ? 'CDK đã được sử dụng' : 'CDK đã hết hạn' },
       { status: 400 }
     )
   }
@@ -53,10 +56,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Không thể tạo đơn hàng' }, { status: 500 })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderRecord = order as any
+
   return NextResponse.json({
     success: true,
-    orderId: order.id,
-    cdkType: cdk.type,
+    orderId: orderRecord.id,
+    cdkType: cdkRecord.type,
     message: 'Đơn hàng đã được tạo. Admin sẽ xử lý trong vài phút.',
   })
 }

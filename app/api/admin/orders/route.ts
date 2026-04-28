@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
-function checkAdmin(req: NextRequest) {
+function checkAdmin(req: NextRequest): boolean {
   const token = req.headers.get('x-admin-token')
   return token === process.env.ADMIN_SECRET
 }
