@@ -9,6 +9,10 @@ interface CdkRecord {
 }
 
 export async function POST(req: NextRequest) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Hệ thống chưa được cấu hình Supabase' }, { status: 503 })
+  }
+
   const { codes } = await req.json()
 
   if (!codes || !Array.isArray(codes) || codes.length === 0) {

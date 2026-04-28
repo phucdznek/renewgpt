@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Hệ thống chưa được cấu hình Supabase' }, { status: 503 })
+  }
+
   const { cdkCode, sessionData } = await req.json()
 
   if (!cdkCode || !sessionData) {

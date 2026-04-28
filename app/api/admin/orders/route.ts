@@ -9,6 +9,7 @@ function checkAdmin(req: NextRequest): boolean {
 // Lấy danh sách đơn hàng
 export async function GET(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Supabase chưa cấu hình' }, { status: 503 })
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 // Cập nhật trạng thái đơn hàng
 export async function PATCH(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Supabase chưa cấu hình' }, { status: 503 })
 
   const { id, status, note } = await req.json()
 

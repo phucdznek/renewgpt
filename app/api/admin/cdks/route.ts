@@ -9,6 +9,7 @@ function checkAdmin(req: NextRequest): boolean {
 // Lấy danh sách CDK
 export async function GET(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Supabase chưa cấu hình' }, { status: 503 })
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
 // Thêm CDK mới (hỗ trợ bulk)
 export async function POST(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Supabase chưa cấu hình' }, { status: 503 })
 
   const { codes, type = 'PLUS' } = await req.json()
 
@@ -59,6 +61,7 @@ export async function POST(req: NextRequest) {
 // Xóa CDK
 export async function DELETE(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Supabase chưa cấu hình' }, { status: 503 })
 
   const { code } = await req.json()
   if (!code) return NextResponse.json({ error: 'Thiếu code' }, { status: 400 })
