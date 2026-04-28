@@ -4,14 +4,22 @@ import { useState } from 'react'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   available:  { label: 'Còn dùng được', color: 'text-green-600 bg-green-50' },
-  used:       { label: 'Đã sử dụng',    color: 'text-gray-500 bg-gray-100' },
-  expired:    { label: 'Hết hạn',       color: 'text-red-500 bg-red-50' },
-  not_found:  { label: 'Không tìm thấy', color: 'text-yellow-600 bg-yellow-50' },
+  processing: { label: 'Đang xử lý',   color: 'text-blue-600 bg-blue-50' },
+  pending:    { label: 'Chờ xử lý',     color: 'text-yellow-600 bg-yellow-50' },
+  completed:  { label: 'Đã sử dụng',    color: 'text-gray-500 bg-gray-100' },
+  failed:     { label: 'Thất bại',       color: 'text-red-500 bg-red-50' },
+}
+
+interface CDKResult {
+  code: string
+  status: string
+  email?: string
+  error?: string
 }
 
 export default function LookupForm() {
   const [input, setInput] = useState('')
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<CDKResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,15 +28,31 @@ export default function LookupForm() {
     const codes = input.split(/[\n,]+/).map((c) => c.trim()).filter(Boolean)
     if (codes.length === 0) return
     setLoading(true)
+    setResults([])
+
     try {
-      const res = await fetch('/api/lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ codes }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setResults(data.results)
+      const lookupResults: CDKResult[] = []
+
+      for (const code of codes.slice(0, 20)) {
+        try {
+          const res = await fetch('/api/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ uniqueCode: code }),
+          })
+          const data = await res.json()
+          lookupResults.push({
+            code,
+            status: data.status || 'not_found',
+            email: data.email,
+            error: data.error,
+          })
+        } catch {
+          lookupResults.push({ code, status: 'not_found' })
+        }
+      }
+
+      setResults(lookupResults)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -65,7 +89,10 @@ export default function LookupForm() {
             const s = STATUS_MAP[r.status] ?? { label: r.status, color: 'text-gray-500 bg-gray-100' }
             return (
               <div key={r.code} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                <span className="font-mono text-sm font-medium">{r.code}</span>
+                <div>
+                  <span className="font-mono text-sm font-medium">{r.code}</span>
+                  {r.email && <span className="text-xs text-gray-400 ml-2">{r.email}</span>}
+                </div>
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.color}`}>
                   {s.label}
                 </span>

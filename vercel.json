@@ -1,6 +1,26 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "installCommand": "npm install",
-  "outputDirectory": ".next"
+  "rewrites": [
+    {
+      "source": "/api/submit",
+      "destination": "https://autosubai.com/submit"
+    },
+    {
+      "source": "/api/check",
+      "destination": "https://autosubai.com/check"
+    },
+    {
+      "source": "/api/status/:path*",
+      "destination": "https://autosubai.com/status/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Accept" }
+      ]
+    }
+  ]
 }

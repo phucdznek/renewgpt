@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 
-type Step = 'form' | 'confirm' | 'done'
-
-interface OrderResult {
-  orderId: string
-  cdkType: string
-  message: string
-}
+type Step = 'form' | 'confirm' | 'processing' | 'done' | 'error'
 
 export default function RenewForm() {
   const [step, setStep] = useState<Step>('form')
@@ -16,43 +10,125 @@ export default function RenewForm() {
   const [sessionData, setSessionData] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<OrderResult | null>(null)
+  const [result, setResult] = useState<any>(null)
+  const [timer, setTimer] = useState('0:00')
 
   async function handleSubmit() {
     setError('')
     setLoading(true)
+    setStep('processing')
+
+    // Start timer
+    let seconds = 0
+    const timerInterval = setInterval(() => {
+      seconds++
+      const m = Math.floor(seconds / 60)
+      const s = seconds % 60
+      setTimer(`${m}:${s.toString().padStart(2, '0')}`)
+    }, 1000)
+
     try {
-      const res = await fetch('/api/renew', {
+      // Submit to autosubai.com via rewrite
+      const res = await fetch('/api/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cdkCode, sessionData }),
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ uniqueCode: cdkCode, sessionData }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setResult(data)
-      setStep('done')
+      if (!res.ok) throw new Error(data.message || data.error || 'Lỗi khi gửi yêu cầu')
+
+      // Poll for completion
+      let attempt = 0
+      const maxAttempts = 120
+
+      const poll = async () => {
+        attempt++
+        try {
+          const checkRes = await fetch('/api/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ uniqueCode: cdkCode }),
+          })
+          const checkData = await checkRes.json()
+
+          if (checkData.status === 'completed') {
+            clearInterval(timerInterval)
+            setResult(checkData)
+            setStep('done')
+            return
+          }
+          if (checkData.status === 'failed') {
+            clearInterval(timerInterval)
+            throw new Error(checkData.message || checkData.error || 'Xử lý thất bại')
+          }
+          if (attempt >= maxAttempts) {
+            clearInterval(timerInterval)
+            throw new Error('Hết thời gian chờ. Kiểm tra lại qua Tra cứu CDK.')
+          }
+          setTimeout(poll, 5000)
+        } catch (e: any) {
+          clearInterval(timerInterval)
+          setError(e.message)
+          setStep('error')
+        }
+      }
+
+      setTimeout(poll, 3000)
     } catch (e: any) {
+      clearInterval(timerInterval)
       setError(e.message)
+      setStep('error')
     } finally {
       setLoading(false)
     }
+  }
+
+  function reset() {
+    setStep('form')
+    setCdkCode('')
+    setSessionData('')
+    setResult(null)
+    setError('')
+    setTimer('0:00')
+  }
+
+  if (step === 'processing') {
+    return (
+      <div className="text-center py-8">
+        <div className="inline-block w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">Đang xử lý yêu cầu</h3>
+        <p className="text-gray-500 text-sm mb-2">Hệ thống đang nâng cấp tài khoản của bạn...</p>
+        <p className="font-mono text-blue-600 text-lg">{timer}</p>
+      </div>
+    )
   }
 
   if (step === 'done' && result) {
     return (
       <div className="text-center py-8">
         <div className="text-5xl mb-4">🎉</div>
-        <h3 className="text-xl font-bold text-green-600 mb-2">Đơn hàng đã được tạo!</h3>
-        <p className="text-gray-600 mb-4">{result.message}</p>
+        <h3 className="text-xl font-bold text-green-600 mb-2">Nâng cấp thành công!</h3>
+        <p className="text-gray-600 mb-4">Tài khoản đã được nâng cấp ChatGPT Plus</p>
         <div className="bg-gray-50 rounded-lg p-4 text-left text-sm space-y-1 mb-6">
-          <p><span className="font-medium">Mã đơn:</span> <span className="font-mono text-xs">{result.orderId}</span></p>
-          <p><span className="font-medium">Gói:</span> ChatGPT {result.cdkType}</p>
+          {result.email && <p><span className="font-medium">Email:</span> {result.email}</p>}
+          <p><span className="font-medium">CDK:</span> <span className="font-mono text-xs">{cdkCode.substring(0, 4)}****{cdkCode.substring(cdkCode.length - 4)}</span></p>
+          <p><span className="font-medium">Trạng thái:</span> <span className="text-green-600">✅ Hoàn thành</span></p>
         </div>
-        <button
-          onClick={() => { setStep('form'); setCdkCode(''); setSessionData(''); setResult(null) }}
-          className="text-blue-600 hover:underline text-sm"
-        >
-          Gia hạn thêm
+        <button onClick={reset} className="text-blue-600 hover:underline text-sm">
+          Thực hiện đơn mới
+        </button>
+      </div>
+    )
+  }
+
+  if (step === 'error') {
+    return (
+      <div className="text-center py-8">
+        <div className="text-5xl mb-4">❌</div>
+        <h3 className="text-xl font-bold text-red-600 mb-2">Thất bại</h3>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button onClick={reset} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+          Thử lại
         </button>
       </div>
     )
@@ -72,7 +148,6 @@ export default function RenewForm() {
             <p className="font-mono text-xs mt-0.5 truncate">{sessionData.slice(0, 60)}...</p>
           </div>
         </div>
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
         <div className="flex gap-3">
           <button
             onClick={() => setStep('form')}
