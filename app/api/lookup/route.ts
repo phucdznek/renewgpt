@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
   }
 
   // Map kết quả, những code không tìm thấy trả về not_found
-  const foundCodes = new Set(cdks?.map((c) => c.code) ?? [])
   const results = cleanCodes.map((code) => {
     const found = cdks?.find((c) => c.code === code)
     return found
