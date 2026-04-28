@@ -3,14 +3,12 @@
 import { useState } from 'react'
 import RenewForm from '@/components/RenewForm'
 import LookupForm from '@/components/LookupForm'
-import QuickForm from '@/components/QuickForm'
 
-type Tab = 'renew' | 'lookup' | 'quick'
+type Tab = 'renew' | 'lookup'
 
 const TABS = [
   { id: 'renew' as Tab,  icon: '💳', label: 'Gia hạn GPT' },
   { id: 'lookup' as Tab, icon: '🔍', label: 'Tra cứu CDK' },
-  { id: 'quick' as Tab,  icon: '⚡', label: 'Kích gói nhanh' },
 ]
 
 const FEATURES = [
@@ -96,7 +94,6 @@ export default function Home() {
           <div className="p-6">
             {activeTab === 'renew'  && <RenewForm />}
             {activeTab === 'lookup' && <LookupForm />}
-            {activeTab === 'quick'  && <QuickForm />}
           </div>
         </div>
       </section>
