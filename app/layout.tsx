@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'RenewGPT - Gia hạn ChatGPT Plus',
+  title: 'trick.io.vn - Gia hạn ChatGPT Plus',
   description: 'Dịch vụ gia hạn ChatGPT Plus tự động bằng CDK code. Nhanh chóng, an toàn, 24/7.',
 }
 

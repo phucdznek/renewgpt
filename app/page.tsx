@@ -12,7 +12,7 @@ const TABS = [
 ]
 
 const FEATURES = [
-  { icon: '🚀', title: 'Xử lý nhanh', desc: 'Đơn hàng được xử lý trong ~2 phút' },
+  { icon: '🚀', title: 'Xử lý nhanh', desc: 'Đơn hàng được xử lý trong 30 phút tới 1 tiếng' },
   { icon: '🔒', title: 'Bảo mật', desc: 'Dữ liệu được mã hoá end-to-end' },
   { icon: '💬', title: 'Hỗ trợ 24/7', desc: 'Hỗ trợ qua Telegram 7:00 - 24:00' },
   { icon: '✅', title: 'Tỉ lệ thành công', desc: 'Trên 99.8% đơn hàng thành công' },
@@ -28,7 +28,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🤖</span>
-            <span className="font-bold text-gray-900 text-lg">RenewGPT</span>
+            <span className="font-bold text-gray-900 text-lg">trick.io.vn</span>
           </div>
           <a
             href="https://t.me/"
@@ -58,7 +58,7 @@ export default function Home() {
           </div>
           <div className="border-l border-gray-200" />
           <div>
-            <p className="text-2xl font-bold text-blue-600">~2 phút</p>
+            <p className="text-2xl font-bold text-blue-600">30-60 phút</p>
             <p className="text-gray-500">Xử lý</p>
           </div>
           <div className="border-l border-gray-200" />
@@ -113,7 +113,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-gray-100 py-6 text-center text-sm text-gray-400">
-        © {new Date().getFullYear()} RenewGPT — Dịch vụ gia hạn ChatGPT Plus
+        © {new Date().getFullYear()} trick.io.vn — Dịch vụ gia hạn ChatGPT Plus
       </footer>
     </div>
   )
