@@ -44,7 +44,7 @@ export default function Home() {
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-16 pb-10 text-center">
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
-          Gia hạn <span className="text-blue-600">ChatGPT Plus</span><br />chỉ trong vài phút
+          Gia hạn <span className="text-blue-600">ChatGPT Plus</span><br />nhanh chóng và bảo mật
         </h1>
         <p className="text-gray-500 text-lg max-w-xl mx-auto mb-8">
           Sử dụng CDK code để gia hạn tự động. Nhanh chóng, bảo mật, tỉ lệ thành công 99.8%.

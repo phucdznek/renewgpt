@@ -156,9 +156,9 @@ export default function RenewForm() {
 
   // Step indicators
   const steps = [
-    { num: 1, label: 'Mã CDK' },
-    { num: 2, label: 'Session' },
-    { num: 3, label: 'Xác nhận' },
+    { num: 1, label: 'Nhập & Xác nhận Key' },
+    { num: 2, label: 'Nhập & Check Session' },
+    { num: 3, label: 'Xác nhận & Nâng cấp' },
   ]
   const currentStepNum = step === 'cdk' ? 1 : step === 'token' ? 2 : step === 'confirm' ? 3 : 3
 
