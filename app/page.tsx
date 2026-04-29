@@ -31,7 +31,7 @@ export default function Home() {
             <span className="font-bold text-gray-900 text-lg">trick.io.vn</span>
           </div>
           <a
-            href="https://t.me/"
+            href="https://t.me/ovartorr"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
