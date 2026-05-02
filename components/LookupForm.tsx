@@ -9,6 +9,7 @@ const STATUS_MAP: Record<string, Record<Language, string>> = {
   pending:    { vi: 'Chờ xử lý',     en: 'Pending',    zh: '待处理' },
   done:       { vi: 'Đã sử dụng',    en: 'Used',       zh: '已使用' },
   used:       { vi: 'Đã sử dụng',    en: 'Used',       zh: '已使用' },
+  completed:  { vi: 'Đã sử dụng',    en: 'Used',       zh: '已使用' },
   failed:     { vi: 'Thất bại',       en: 'Failed',     zh: '失败' },
 }
 
@@ -39,7 +40,7 @@ export default function LookupForm({ lang }: Props) {
 
     try {
       if (codes.length === 1) {
-        const res = await fetch(`/api/check/${encodeURIComponent(codes[0])}`)
+        const res = await fetch(`/api/check/${codes[0]}`)
         const data = await res.json()
         setResults([{ code: codes[0], ...data }])
       } else {

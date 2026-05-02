@@ -1,20 +1,28 @@
 {
   "rewrites": [
     {
-      "source": "/api/redeem",
+      "source": "/api/submit",
       "destination": "https://toolsmarket.online/redeem"
     },
     {
-      "source": "/api/job/:path*",
-      "destination": "https://toolsmarket.online/job/:path*"
+      "source": "/api/check-bulk",
+      "destination": "https://toolsmarket.online/check-bulk"
     },
     {
       "source": "/api/check/:path*",
       "destination": "https://toolsmarket.online/check/:path*"
     },
     {
-      "source": "/api/check-bulk",
-      "destination": "https://toolsmarket.online/check-bulk"
+      "source": "/api/status/:path*",
+      "destination": "https://toolsmarket.online/job/:path*"
+    },
+    {
+      "source": "/api/redeem",
+      "destination": "https://toolsmarket.online/redeem"
+    },
+    {
+      "source": "/api/job/:path*",
+      "destination": "https://toolsmarket.online/job/:path*"
     }
   ],
   "headers": [

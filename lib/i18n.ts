@@ -14,7 +14,8 @@ export const translations = {
     },
     tabs: {
       renew: 'Gia hạn GPT',
-      lookup: 'Tra cứu CDK'
+      lookup: 'Tra cứu CDK',
+      quick: 'Kích gói nhanh'
     },
     features: {
       fast: { title: 'Xử lý nhanh', desc: 'Đơn hàng được xử lý trong 30 phút tới 1 tiếng' },
@@ -25,11 +26,12 @@ export const translations = {
     footer: 'Dịch vụ gia hạn ChatGPT Plus',
     form: {
       step1: 'Nhập & Xác nhận Key',
-      step2: 'Nhập & Check Session',
+      step2: 'Thông tin tài khoản',
       step3: 'Xác nhận & Nâng cấp',
       cdkLabel: 'Mã CDK',
-      sessionLabel: 'Session Data',
-      sessionHint: 'Truy cập link trên khi đã đăng nhập ChatGPT, copy toàn bộ nội dung trang',
+      emailLabel: 'Email tài khoản',
+      passwordLabel: 'Mật khẩu',
+      totpLabel: 'Mã bảo mật (TOTP)',
       getHere: 'Lấy tại đây',
       back: 'Quay lại',
       continue: 'Tiếp tục',
@@ -41,7 +43,10 @@ export const translations = {
       successTitle: 'Nâng cấp thành công!',
       failTitle: 'Thất bại',
       tryAgain: 'Thử lại',
-      newOrder: 'Thực hiện đơn mới'
+      newOrder: 'Thực hiện đơn mới',
+      quickTitle: 'Kích gói nhanh',
+      quickDesc: 'Nhập CDK và thông tin tài khoản để xử lý ngay lập tức',
+      quickBtn: 'Kích hoạt ngay'
     }
   },
   en: {
@@ -57,7 +62,8 @@ export const translations = {
     },
     tabs: {
       renew: 'Renew GPT',
-      lookup: 'CDK Lookup'
+      lookup: 'CDK Lookup',
+      quick: 'Quick Activate'
     },
     features: {
       fast: { title: 'Fast Processing', desc: 'Orders processed within 30-60 minutes' },
@@ -68,11 +74,12 @@ export const translations = {
     footer: 'ChatGPT Plus Renewal Service',
     form: {
       step1: 'Enter & Verify Key',
-      step2: 'Enter & Check Session',
+      step2: 'Account Information',
       step3: 'Confirm & Upgrade',
       cdkLabel: 'CDK Code',
-      sessionLabel: 'Session Data',
-      sessionHint: 'Access the link while logged into ChatGPT, copy the entire page content',
+      emailLabel: 'Account Email',
+      passwordLabel: 'Password',
+      totpLabel: 'TOTP Secret (Optional)',
       getHere: 'Get here',
       back: 'Back',
       continue: 'Continue',
@@ -84,7 +91,10 @@ export const translations = {
       successTitle: 'Upgrade Successful!',
       failTitle: 'Failed',
       tryAgain: 'Try Again',
-      newOrder: 'New Order'
+      newOrder: 'New Order',
+      quickTitle: 'Quick Activate',
+      quickDesc: 'Enter CDK and account info for immediate processing',
+      quickBtn: 'Activate Now'
     }
   },
   zh: {
@@ -100,7 +110,8 @@ export const translations = {
     },
     tabs: {
       renew: '续费 GPT',
-      lookup: '查询 CDK'
+      lookup: '查询 CDK',
+      quick: '快速激活'
     },
     features: {
       fast: { title: '快速处理', desc: '订单在 30-60 分钟内处理' },
@@ -111,11 +122,12 @@ export const translations = {
     footer: 'ChatGPT Plus 续费服务',
     form: {
       step1: '输入并验证 Key',
-      step2: '输入并检查 Session',
+      step2: '账户信息',
       step3: '确认并升级',
       cdkLabel: 'CDK 代码',
-      sessionLabel: 'Session 数据',
-      sessionHint: '登录 ChatGPT 后访问上述链接，复制整个页面内容',
+      emailLabel: '账号邮箱',
+      passwordLabel: '密码',
+      totpLabel: 'TOTP 密钥 (可选)',
       getHere: '点击获取',
       back: '返回',
       continue: '继续',
@@ -127,7 +139,10 @@ export const translations = {
       successTitle: '升级成功！',
       failTitle: '失败',
       tryAgain: '重试',
-      newOrder: '新订单'
+      newOrder: '新订单',
+      quickTitle: '快速激活',
+      quickDesc: '输入 CDK 和账号信息，以便立即处理',
+      quickBtn: '立即激活'
     }
   }
 };

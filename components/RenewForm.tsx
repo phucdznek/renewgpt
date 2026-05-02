@@ -12,14 +12,16 @@ interface Props {
 export default function RenewForm({ lang }: Props) {
   const [step, setStep] = useState<Step>('cdk')
   const [cdkCode, setCdkCode] = useState('')
-  const [sessionData, setSessionData] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [totp, setTotp] = useState('')
   const [cdkInfo, setCdkInfo] = useState<any>(null)
-  const [tokenInfo, setTokenInfo] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<any>(null)
   const [timer, setTimer] = useState('0:00')
   const [statusMsg, setStatusMsg] = useState('')
+  const [progress, setProgress] = useState({ stage: 0, total: 0 })
 
   const t = translations[lang].form;
 
@@ -30,13 +32,13 @@ export default function RenewForm({ lang }: Props) {
     setLoading(true)
 
     try {
-      const res = await fetch(`/api/check/${encodeURIComponent(cdkCode.trim())}`)
+      const res = await fetch(`/api/check/${cdkCode.trim()}`)
       const data = await res.json()
 
       if (data.cdk_status === 'unused') {
         setCdkInfo(data)
-        setStep('token')
-      } else if (data.cdk_status === 'used' || data.cdk_status === 'done') {
+        setStep('token') // Step 2 (Account info)
+      } else if (['used', 'done', 'completed'].includes(data.cdk_status)) {
         setError(lang === 'vi' ? '❌ Mã CDK này đã được sử dụng.' : lang === 'en' ? '❌ This CDK code has been used.' : '❌ 此 CDK 代码已被使用。')
       } else if (data.cdk_status === 'processing' || data.cdk_status === 'pending') {
         setError(lang === 'vi' ? '⚠️ Mã CDK này đang được xử lý.' : lang === 'en' ? '⚠️ This CDK code is being processed.' : '⚠️ 此 CDK 代码正在处理中。')
@@ -50,43 +52,14 @@ export default function RenewForm({ lang }: Props) {
     }
   }
 
-  // Step 2: Check Token
-  function handleCheckToken() {
+  // Step 2: Validate Credentials
+  function handleCheckCredentials() {
     setError('')
-    const raw = sessionData.trim()
-    if (!raw) return
-
-    try {
-      let accessToken = ''
-      let email = ''
-      let planType = ''
-
-      try {
-        const parsed = JSON.parse(raw)
-        accessToken = parsed.accessToken || parsed.access_token || ''
-        email = parsed.user?.email || ''
-        planType = parsed.account?.planType || parsed.account?.plan_type || ''
-      } catch {
-        if (raw.startsWith('eyJ')) {
-          accessToken = raw
-        }
-      }
-
-      if (!accessToken) {
-        setError(lang === 'vi' ? '❌ Session data không chứa accessToken.' : lang === 'en' ? '❌ Session data does not contain accessToken.' : '❌ Session 数据不包含 accessToken。')
-        return
-      }
-
-      if (!accessToken.startsWith('eyJ')) {
-        setError(lang === 'vi' ? '❌ Access token không đúng định dạng JWT.' : lang === 'en' ? '❌ Access token is not in JWT format.' : '❌ Access token 不是 JWT 格式。')
-        return
-      }
-
-      setTokenInfo({ accessToken, email, planType })
-      setStep('confirm')
-    } catch {
-      setError(lang === 'vi' ? '❌ Dữ liệu session không hợp lệ' : lang === 'en' ? '❌ Invalid session data' : '❌ 无效的 session 数据')
+    if (!email.trim() || !password.trim()) {
+      setError(lang === 'vi' ? '❌ Vui lòng nhập email và mật khẩu.' : lang === 'en' ? '❌ Please enter email and password.' : '❌ 请输入邮箱和密码。')
+      return
     }
+    setStep('confirm')
   }
 
   // Step 3: Submit
@@ -105,45 +78,51 @@ export default function RenewForm({ lang }: Props) {
     }, 1000)
 
     try {
-      const res = await fetch('/api/redeem', {
+      const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cdk: cdkCode.trim(), access_token: tokenInfo.accessToken }),
+        body: JSON.stringify({ 
+          cdk: cdkCode.trim(), 
+          email: email.trim(),
+          password: password.trim(),
+          totp_secret: totp.trim()
+        }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || data.message || (lang === 'vi' ? 'Lỗi khi gửi yêu cầu' : 'Request error'))
-
+      if (data.error) throw new Error(data.error)
+      
       const jobId = data.job_id
-      setStatusMsg(`${lang === 'vi' ? 'Đang xử lý' : 'Processing'}... (${lang === 'vi' ? 'vị trí' : 'pos'}: ${data.queue_position || '?'})`)
 
       const poll = async () => {
         try {
-          const pollRes = await fetch(`/api/job/${jobId}?wait=30`)
-          const pollData = await pollRes.json()
+          const pollRes = await fetch(`/api/status/${jobId}?wait=30`)
+          const info = await pollRes.json()
 
-          if (pollData.status === 'done') {
+          if (info.status === 'success' || info.status === 'done') {
             clearInterval(timerInterval)
-            setResult(pollData)
+            setResult(info)
             setStep('done')
             return
           }
-          if (pollData.status === 'failed') {
+          if (info.status === 'failed') {
             clearInterval(timerInterval)
-            throw new Error(lang === 'vi' ? 'Kích hoạt thất bại. CDK đã được khôi phục tự động.' : 'Activation failed. CDK auto-restored.')
+            throw new Error(info.error || (lang === 'vi' ? 'Kích hoạt thất bại.' : 'Activation failed.'))
           }
-          setStatusMsg(`${lang === 'vi' ? 'Đang' : 'Now'} ${pollData.status === 'processing' ? (lang === 'vi' ? 'kích hoạt' : 'activating') : (lang === 'vi' ? 'chờ xử lý' : 'pending')}...`)
-          setTimeout(poll, 2000)
+          
+          if (info.stage) {
+            setProgress({ stage: info.stage, total: info.total_stages || 0 })
+          }
+          setStatusMsg(info.stage_label || info.message || (lang === 'vi' ? 'Đang xử lý...' : 'Processing...'))
+          
+          // Continue polling
+          setTimeout(poll, 1000)
         } catch (e: any) {
           clearInterval(timerInterval)
           setError(e.message)
           setStep('error')
         }
       }
-      setTimeout(poll, 2000)
-    } catch (e: any) {
-      clearInterval(timerInterval)
-      setError(e.message)
-      setStep('error')
+      poll()
     } finally {
       setLoading(false)
     }
@@ -152,13 +131,15 @@ export default function RenewForm({ lang }: Props) {
   function reset() {
     setStep('cdk')
     setCdkCode('')
-    setSessionData('')
+    setEmail('')
+    setPassword('')
+    setTotp('')
     setCdkInfo(null)
-    setTokenInfo(null)
     setResult(null)
     setError('')
     setTimer('0:00')
     setStatusMsg('')
+    setProgress({ stage: 0, total: 0 })
   }
 
   // Step indicators
@@ -176,7 +157,23 @@ export default function RenewForm({ lang }: Props) {
       <div className="text-center py-8">
         <div className="inline-block w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
         <h3 className="text-lg font-semibold text-gray-800 mb-1">{t.processingTitle}</h3>
-        <p className="text-gray-500 text-sm mb-2">{statusMsg}</p>
+        <p className="text-gray-500 text-sm mb-4">{statusMsg}</p>
+        
+        {progress.total > 0 && (
+          <div className="max-w-xs mx-auto mb-4">
+            <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <span>{Math.round((progress.stage / progress.total) * 100)}%</span>
+              <span>{progress.stage}/{progress.total}</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full transition-all duration-500" 
+                style={{ width: `${(progress.stage / progress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         <p className="font-mono text-blue-600 text-lg">{timer}</p>
       </div>
     )
@@ -188,8 +185,23 @@ export default function RenewForm({ lang }: Props) {
         <div className="text-5xl mb-4">🎉</div>
         <h3 className="text-xl font-bold text-green-600 mb-2">{t.successTitle}</h3>
         <p className="text-gray-600 mb-4">{lang === 'vi' ? 'Tài khoản đã được nâng cấp' : 'Account upgraded to'} ChatGPT {cdkInfo?.workflow?.toUpperCase() || result.workflow?.toUpperCase() || 'Plus'}</p>
+        
+        {result.url && (
+          <div className="mb-6">
+            <a 
+              href={result.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition font-medium"
+            >
+              {lang === 'vi' ? '👉 Nhấn để tham gia' : '👉 Click to join'}
+            </a>
+            <p className="text-xs text-gray-400 mt-2">{lang === 'vi' ? 'Vui lòng nhấn nút trên để hoàn tất' : 'Please click the button above to complete'}</p>
+          </div>
+        )}
+
         <div className="bg-gray-50 rounded-lg p-4 text-left text-sm space-y-1 mb-6">
-          {tokenInfo?.email && <p><span className="font-medium">Email:</span> {tokenInfo.email}</p>}
+          {email && <p><span className="font-medium">Email:</span> {email}</p>}
           <p><span className="font-medium">CDK:</span> <span className="font-mono text-xs">{cdkCode}</span></p>
           <p><span className="font-medium">{lang === 'vi' ? 'Trạng thái' : 'Status'}:</span> <span className="text-green-600">✅ {lang === 'vi' ? 'Hoàn thành' : 'Done'}</span></p>
         </div>
@@ -248,31 +260,55 @@ export default function RenewForm({ lang }: Props) {
         </div>
       )}
 
-      {/* Step 2: Token */}
+      {/* Step 2: Account info */}
       {step === 'token' && (
         <div className="space-y-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
             ✅ CDK {lang === 'vi' ? 'hợp lệ' : 'valid'} — {lang === 'vi' ? 'Gói' : 'Plan'}: <span className="font-medium">{cdkInfo?.workflow?.toUpperCase() || 'PLUS'}</span>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.sessionLabel} <span className="text-red-500">*</span>
-              <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noopener noreferrer"
-                className="ml-2 text-blue-600 hover:underline font-normal">{t.getHere} ↗</a>
-            </label>
-            <textarea value={sessionData} onChange={(e) => { setSessionData(e.target.value); setError('') }}
-              placeholder={lang === 'vi' ? 'Dán nội dung JSON từ chatgpt.com/api/auth/session vào đây...' : 'Paste JSON content from chatgpt.com/api/auth/session here...'}
-              rows={4}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
-            <p className="text-xs text-gray-400 mt-1">{t.sessionHint}</p>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t.emailLabel}</label>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => { setEmail(e.target.value); setError('') }}
+                placeholder="example@gmail.com"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t.passwordLabel}</label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => { setPassword(e.target.value); setError('') }}
+                placeholder="••••••••"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t.totpLabel}</label>
+              <input 
+                type="text" 
+                value={totp} 
+                onChange={(e) => { setTotp(e.target.value); setError('') }}
+                placeholder="JBSW..."
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">{lang === 'vi' ? 'Nếu tài khoản có 2FA, vui lòng nhập mã bảo mật (2FA Secret)' : 'If account has 2FA, please enter 2FA Secret'}</p>
+            </div>
           </div>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
+          
           <div className="flex gap-3">
             <button onClick={() => { setStep('cdk'); setError('') }}
               className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
               ← {t.back}
             </button>
-            <button onClick={handleCheckToken} disabled={!sessionData.trim()}
+            <button onClick={handleCheckCredentials} disabled={!email || !password}
               className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">
               {t.continue} →
             </button>
@@ -295,18 +331,10 @@ export default function RenewForm({ lang }: Props) {
               <span className="text-gray-500">{lang === 'vi' ? 'Gói' : 'Plan'}</span>
               <span className="font-medium">{cdkInfo?.workflow?.toUpperCase() || 'PLUS'}</span>
             </div>
-            {tokenInfo?.email && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Email</span>
-                <span className="font-medium">{tokenInfo.email}</span>
-              </div>
-            )}
-            {tokenInfo?.planType && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{t.currentPlan}</span>
-                <span className="font-medium">{tokenInfo.planType}</span>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-gray-500">Email</span>
+              <span className="font-medium">{email}</span>
+            </div>
           </div>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
             ⚠️ {t.noOverlayHint}

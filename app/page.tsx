@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import RenewForm from '@/components/RenewForm'
 import LookupForm from '@/components/LookupForm'
+import QuickForm from '@/components/QuickForm'
 import { translations, Language } from '@/lib/i18n'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'renew' | 'lookup'>('renew')
+  const [activeTab, setActiveTab] = useState<'renew' | 'lookup' | 'quick'>('renew')
   const [lang, setLang] = useState<Language>('vi')
 
   const t = translations[lang]
@@ -19,6 +20,7 @@ export default function Home() {
 
   const TABS = [
     { id: 'renew',  icon: '💳', label: t.tabs.renew },
+    { id: 'quick',  icon: '⚡', label: t.tabs.quick },
     { id: 'lookup', icon: '🔍', label: t.tabs.lookup },
   ]
 
@@ -139,6 +141,7 @@ export default function Home() {
           {/* Form content */}
           <div className="p-6">
             {activeTab === 'renew'  && <RenewForm lang={lang} />}
+            {activeTab === 'quick'  && <QuickForm lang={lang} />}
             {activeTab === 'lookup' && <LookupForm lang={lang} />}
           </div>
         </div>

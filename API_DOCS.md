@@ -2,7 +2,7 @@
 
 ## Overview
 
-Tools Market provides a CDK (Code) redemption system for activating **ChatGPT Plus** and **ChatGPT Pro** subscriptions. This API allows you to redeem CDK codes and check their activation status.
+Tools Market provides a CDK (Code) redemption system for activating **ChatGPT Plus** and other subscriptions. This API allows you to redeem CDK codes using account credentials (Direct Login) or check their status.
 
 ## Base URL
 
@@ -12,10 +12,10 @@ https://toolsmarket.online
 
 ## Quick Start
 
-1. Get a **CDK Code** from the admin (e.g. `TM-PLUS-XXXXXXXXXXXXXXXX`)
-2. Get the user's **Access Token** from `https://chatgpt.com/api/auth/session`
-3. Call `POST /redeem` with both values
-4. Poll `GET /job/{job_id}?wait=30` until status is `done` or `failed`
+1. Get a **CDK Code** (e.g. `TM-PLUS-XXXXXXXXXXXXXXXX`)
+2. Collect the user's **Email**, **Password**, and **TOTP Secret** (if 2FA is enabled)
+3. Call `POST /redeem` with these values
+4. Poll `GET /job/{job_id}?wait=30` until status is `success` or `failed`
 
 ---
 
@@ -23,47 +23,36 @@ https://toolsmarket.online
 
 ### POST /redeem
 
-Redeem a CDK code to activate a ChatGPT subscription.
+Redeem a CDK code to activate a subscription.
 
 **Request:**
 
 ```json
 {
   "cdk": "TM-PLUS-S2D3F4...",
-  "access_token": "eyJhbGciOiJSUzI1NiIs..."
+  "email": "user@example.com",
+  "password": "my_password123",
+  "totp_secret": "JBSWY3DPEHPK3PXP"
 }
 ```
 
-| Field          | Type   | Required | Description                                |
-| -------------- | ------ | -------- | ------------------------------------------ |
-| `cdk`          | string | ✓        | The CDK code provided (TM- prefix)         |
-| `access_token` | string | ✓        | User's ChatGPT access token (JWT)          |
-
-> **How to get the access token:**
-> 1. Log into [chatgpt.com](https://chatgpt.com)
-> 2. Visit `https://chatgpt.com/api/auth/session`
-> 3. Copy the `accessToken` field value (starts with `eyJ...`)
+| Field         | Type   | Required | Description                                  |
+| ------------- | ------ | -------- | -------------------------------------------- |
+| `cdk`         | string | ✓        | The CDK code provided                        |
+| `email`       | string | ✓        | Account email                                |
+| `password`    | string | ✓        | Account password                             |
+| `totp_secret` | string | ✗        | 2FA Secret/Seed (if enabled on account)      |
 
 **Success Response — HTTP 200:**
 
 ```json
 {
   "job_id": "a1b2c3d4e5f6...",
-  "workflow": "plus",
   "status": "pending",
   "queue_position": 2,
   "estimated_wait_seconds": 540.0
 }
 ```
-
-**Error Responses:**
-
-| HTTP Code | Error                        | Description                          |
-| --------- | ---------------------------- | ------------------------------------ |
-| 400       | Invalid or Used CDK          | Code is incorrect or already spent   |
-| 401       | Unauthorized                 | (Internal) Invalid API integration   |
-| 402       | Insufficient balance         | No credits remaining for this plan   |
-| 500       | API Error                    | Upstream provider error              |
 
 ---
 
@@ -84,17 +73,26 @@ Check the status of an activation job. Supports **long-polling**.
 GET /job/a1b2c3d4e5f6?wait=30
 ```
 
-The server will hold the connection for up to `wait` seconds until the job completes, reducing the number of poll requests needed.
-
-**Response:**
+**Response (Processing):**
 
 ```json
 {
   "job_id": "a1b2c3d4e5f6...",
-  "status": "done",
-  "workflow": "plus",
-  "created_at": "2026-04-25T01:00:00Z",
-  "completed_at": "2026-04-25T01:03:00Z"
+  "status": "processing",
+  "stage": 3,
+  "total_stages": 8,
+  "stage_label": "Logging in...",
+  "queue_position": 0
+}
+```
+
+**Response (Success):**
+
+```json
+{
+  "job_id": "a1b2c3d4e5f6...",
+  "status": "success",
+  "url": "https://families.google.com/invitation/..."
 }
 ```
 
@@ -104,25 +102,16 @@ The server will hold the connection for up to `wait` seconds until the job compl
 | ------------ | ---------------------------------------- |
 | `pending`    | Queued, waiting to be processed          |
 | `processing` | Currently being activated                |
-| `done`       | ✅ Subscription activated successfully   |
+| `success`    | ✅ Subscription activated successfully   |
 | `failed`     | ❌ Activation failed (CDK is Auto-Restored) |
-
-> [!TIP]
-> **Automatic Restoration**: If a job status becomes `failed`, the associated CDK is automatically restored to "Available" status in our database. You can immediately try redeeming it again on a different account.
 
 ---
 
 ### GET /check/{cdk}
 
-Check the status of a single CDK code without redeeming it.
+Check the status of a single CDK code.
 
-**Example:**
-
-```
-GET /check/TM-PLUS-XXXXXXXXXXXXXXXX
-```
-
-**Response (unused):**
+**Response:**
 
 ```json
 {
@@ -132,22 +121,11 @@ GET /check/TM-PLUS-XXXXXXXXXXXXXXXX
 }
 ```
 
-**Response (used & processing):**
-
-```json
-{
-  "cdk_status": "processing",
-  "status": "processing",
-  "job_id": "a1b2c3d4...",
-  "workflow": "plus"
-}
-```
-
 ---
 
 ### POST /check-bulk
 
-Check the status of multiple CDK codes (max 100).
+Check multiple CDK codes (max 100).
 
 **Request:**
 
@@ -169,10 +147,9 @@ Check the status of multiple CDK codes (max 100).
     },
     {
       "code": "TM-PRO-Y2",
-      "cdk_status": "used",
+      "cdk_status": "completed",
       "job_id": "a1b2...",
-      "email": "user@example.com",
-      "verified": "yes"
+      "workflow": "pro"
     }
   ]
 }
@@ -180,62 +157,9 @@ Check the status of multiple CDK codes (max 100).
 
 ---
 
-### GET /balance
-
-Fetch remaining credits for your workflows.
-
-**Example:** `GET /balance`
-
-**Response:**
-```json
-{
-  "balances": {
-    "plus": 45,
-    "pro": 12
-  }
-}
-```
-
----
-
-## Integration Example (JavaScript)
-
-```javascript
-async function activate(cdk, token) {
-    const BASE = 'https://toolsmarket.online';
-    
-    // 1. Redeem
-    let res = await fetch(`${BASE}/redeem`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cdk, access_token: token })
-    });
-    let data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-
-    // 2. Poll
-    let job = data;
-    while (job.status !== 'done' && job.status !== 'failed') {
-        const poll = await fetch(`${BASE}/job/${job.job_id}?wait=30`);
-        job = await poll.json();
-    }
-    
-    if (job.status === 'done') console.log("Activated!");
-    else console.error("Failed — CDK has been restored.");
-}
-```
-
----
-
 ## Important Notes
 
-1. **CDK Prefix**: All codes start with `TM-`.
-2. **One-Time Use**: Each CDK works exactly once per successful activation.
-3. **Refunds**: If the upstream API returns `failed`, we automatically refund the credit and reactivate your CDK code.
-4. **Access Tokens**: These expire frequently. Always ensure you have a fresh token before calling `/redeem`.
+1. **Wait Parameter**: Always use `?wait=30` when polling to reduce server load and get faster updates.
+2. **Success URL**: For some plans (like Google One), a `url` is returned on success. Users MUST visit this URL to complete the process.
+3. **Refunds**: If status is `failed`, the CDK is automatically restored.
 
----
-
-## Support
-
-Contact the system owner via Telegram for keys or support.
